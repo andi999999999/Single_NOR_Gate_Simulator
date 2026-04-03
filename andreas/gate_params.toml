@@ -1,0 +1,20 @@
+# time in seconds, capacity in Farad
+
+[gate]
+name = "NOR_15nm_chain"
+technology = "FreePDK15"
+
+[measured_delays]
+# Falling output (δ_S↓) — nMOS
+delta_S_fall_neg_inf  = 3.3798e-12   # δ↓_S(−∞)
+delta_S_fall_zero     = 2.190e-12    # δ↓_S(0)
+delta_S_fall_pos_inf  = 3.7226e-12   # δ↓_S(+∞)
+
+# rising output (δ_S↑) — pMOS
+delta_S_rise_neg_inf  = 3.8054e-12    # δ↑_S(−∞)
+delta_S_rise_zero     = 4.107e-12    # δ↑_S(0)
+delta_S_rise_pos_inf  = 3.616e-12   # δ↑_S(+∞)
+
+[model]
+delta_min = 299e-15    # Pure Delay (fs → s)
+C         = 0.9431e-15 # Lastkapazität (fF → F)
