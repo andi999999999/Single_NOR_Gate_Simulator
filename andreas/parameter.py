@@ -32,6 +32,7 @@ class DerivedConstants:
     C1_p: float   # C(R5 + RnB) / RnB
     C2: float     # C(R5(RnA+RnB) + RnA·RnB) / (RnA·RnB)
     C3: float     # C(R5 + 2R) / (2R)
+    a: float      # (α₁ + α₂) / (2R)
 
 @dataclass
 class CalculatedParams:
@@ -82,13 +83,14 @@ def parameterize(delays: MeasuredDelays, physical: PhysicalParams) -> NORModelPa
 # Computing constants C1 - C3 (Eq. 12 - 15)
 def compute_derived_constants(physical: PhysicalParams, calculated: CalculatedParams) -> DerivedConstants:
     C = physical.C
-    R5, RnA, RnB, R = calculated.R5, calculated.RnA, calculated.RnB, calculated.R
+    R5, RnA, RnB, R, alpha1, alpha2 = calculated.R5, calculated.RnA, calculated.RnB, calculated.R, calculated.alpha1, calculated.alpha2
 
     return DerivedConstants(
         C1= (C * (R5 + RnA)) / RnA,
         C1_p= (C * (R5 + RnB)) / RnB,
         C2= (C * (R5 * (RnA + RnB) + RnA * RnB)) / (RnA * RnB),
         C3= (C * (R5 + 2*R)) / 2*R,
+        a = (alpha1 + alpha2 ) / 2*R,
     )
 
 # Wrapper for calculated params (Eq. 24 - 31)
@@ -187,3 +189,4 @@ if __name__ == "__main__":
     print(f"  C1_p   = {params.derived.C1_p*1e15:.4f}")
     print(f"  C2     = {params.derived.C2  *1e15:.4f}")
     print(f"  C3     = {params.derived.C3  *1e15:.4f}")
+    print(f"  a      = {params.derived.a   *1e12:.6f} ps/Ω")
