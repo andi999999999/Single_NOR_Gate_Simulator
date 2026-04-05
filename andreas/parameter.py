@@ -119,8 +119,8 @@ def compute_nmos_params(delays: MeasuredDelays, physical: PhysicalParams):
 def compute_pmos_params(delays: MeasuredDelays, physical: PhysicalParams, R5):
     R = solve_R(delays.S_rise_0, delays.S_rise_pos, delays.S_rise_neg, R5, physical.C, physical.delta_min)
 
-    alpha1 = A(delays.S_rise_neg - physical.delta_min, R, R5, physical.C)
-    alpha2 = A(delays.S_rise_pos - physical.delta_min, R, R5, physical.C)
+    alpha1 = A_eq28(delays.S_rise_neg - physical.delta_min, R, R5, physical.C)
+    alpha2 = A_eq28(delays.S_rise_pos - physical.delta_min, R, R5, physical.C)
 
     return R, alpha1, alpha2
 
@@ -139,13 +139,13 @@ def solve_R(S_rise_0, S_rise_pos, S_rise_neg, R5, C, delta_min):
 # Eq. 29
 def eq29(S_rise_0, S_rise_pos, S_rise_neg, R, R5, C, delta_min):
     return (
-            A(S_rise_0 - delta_min, R, R5, C)
-            - A(S_rise_pos - delta_min, R, R5, C)
-            - A(S_rise_neg - delta_min, R, R5, C)
+            A_eq28(S_rise_0 - delta_min, R, R5, C)
+            - A_eq28(S_rise_pos - delta_min, R, R5, C)
+            - A_eq28(S_rise_neg - delta_min, R, R5, C)
     )
 
 # Eq. 28
-def A(t, R, R5, C):
+def A_eq28(t, R, R5, C):
     K = (C * (R5 + 2*R) * np.log(2)) / t # repeating term
 
     w_arg = (K-1) * np.exp(K - 1)
