@@ -6,6 +6,7 @@ technology = "FreePDK15"
 
 [measured_delays]
 # Falling output (δ_S↓) — nMOS
+# in seconds
 delta_S_fall_neg_inf  = 3.3798e-12   # δ↓_S(−∞)
 delta_S_fall_zero     = 2.190e-12    # δ↓_S(0)
 delta_S_fall_pos_inf  = 3.7226e-12   # δ↓_S(+∞)
@@ -18,3 +19,4 @@ delta_S_rise_pos_inf  = 3.616e-12   # δ↑_S(+∞)
 [model]
 delta_min = 299e-15    # Pure Delay (fs → s)
 C         = 0.9431e-15 # Lastkapazität (fF → F)
+VDD       = 0.8 # V

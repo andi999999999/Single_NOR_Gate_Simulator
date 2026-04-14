@@ -258,7 +258,14 @@ def _compute_helpers(params: NORModelParams, delta):
 
     return Helpers(
         abs_delta=abs_delta,
-        d=d, c_prime=c_prime, chi=chi, sqrt_chi=sqrt_chi, A=A,
-        d_bar=d_bar, c_bar_prime=c_bar_prime, chi_bar=chi_bar,
-        sqrt_chi_bar=sqrt_chi_bar, A_bar=A_bar,
+        d=d,
+        c_prime=c_prime,
+        chi=chi,
+        sqrt_chi=sqrt_chi,
+        A=A,
+        d_bar=d_bar,
+        c_bar_prime=c_bar_prime,
+        chi_bar=chi_bar,
+        sqrt_chi_bar=sqrt_chi_bar,
+        A_bar=A_bar,
     )
