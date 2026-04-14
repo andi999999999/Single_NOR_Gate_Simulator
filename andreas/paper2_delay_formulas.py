@@ -4,7 +4,8 @@ import numpy as np
 from optype import do_le
 from scipy.special import lambertw
 
-from andreas.parameter import NORModelParams, DerivedConstants, PhysicalParams, CalculatedParams
+from parameter import NORModelParams, DerivedConstants, PhysicalParams, CalculatedParams, basic_sanity_test as parameter_basic_sanity_test
+
 
 """Helper-variables, these are dynamically calculated, found after Eq. 11/15, depending on Δ"""
 @dataclass
@@ -286,10 +287,32 @@ def _δVint_rising_helper(Vint, alpha_eff, params: NORModelParams):
 
 
 
+def basic_sanity_check():
+    params, delays, physical = parameter_basic_sanity_test()
+    VDD = params.physical.VDD
+
+    print("\n\n=============== Delay Formulas sanity check ===============")
+    print("----- SPICE values - for comparison: -----")
+    print(f"  δ↓_S(-∞) = {delays.S_fall_neg * 1e12:.4f} ps")
+    print(f"  δ↓_S(0)  = {delays.S_fall_0 * 1e12:.4f} ps")
+    print(f"  δ↓_S(+∞) = {delays.S_fall_pos * 1e12:.4f} ps")
+    print(f"  δ↑_S(-∞) = {delays.S_rise_neg * 1e12:.4f} ps")
+    print(f"  δ↑_S(0)  = {delays.S_rise_0 * 1e12:.4f} ps")
+    print(f"  δ↑_S(+∞) = {delays.S_rise_pos * 1e12:.4f} ps")
+
+    print("----- Model calculated values: -----")
+    print(f"  δ↓_M(-∞) = {δ_case_b_e(VDD, params) * 1e12:.4f} ps")
+    print(f"  δ↓_M(0)  = {δ_case_c_d(VDD, params) * 1e12:.4f} ps")
+    print(f"  δ↓_M(+∞) = {δ_case_a_f(VDD, params) * 1e12:.4f} ps")
+    print(f"  δ↑_M(-∞) = {δ_case_h(-1e6, 0, params) * 1e12:.4f} ps")
+    print(f"  δ↑_M(0) (Case g) = {δ_case_g(0, 0, params) * 1e12:.4f} ps")
+    print(f"  δ↑_M(0) (Case h) = {δ_case_h(0, 0, params) * 1e12:.4f} ps")
+    print(f"  δ↑_M(+∞) = {δ_case_g(1e6, 0, params) * 1e12:.4f} ps")
 
 
 
-
+if __name__ == "__main__":
+    basic_sanity_check()
 
 
 

@@ -166,9 +166,10 @@ def A_eq28(t, R, R5, C):
     return numerator/denominator
 
 
-    
 
-if __name__ == "__main__":
+
+
+def basic_sanity_test():
     delays, physical = load_config("gate_params.toml")
 
     print("=== Loaded Delays ===")
@@ -201,3 +202,8 @@ if __name__ == "__main__":
     print(f"  C3     = {params.derived.C3  *1e15:.4f}")
     print(f"  a      = {params.derived.a   *1e12:.6f} ps/Ω")
     print(f"  τ₃     = {params.derived.tau3}")
+
+    return params, delays, physical
+
+if __name__ == "__main__":
+    basic_sanity_test()
