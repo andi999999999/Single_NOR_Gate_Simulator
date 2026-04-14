@@ -24,6 +24,7 @@ class PhysicalParams:
     """
     delta_min: float
     C: float
+    VDD: float
 
 @dataclass
 class DerivedConstants:
@@ -33,6 +34,7 @@ class DerivedConstants:
     C2: float     # C(R5(RnA+RnB) + RnA·RnB) / (RnA·RnB)
     C3: float     # C(R5 + 2R) / (2R)
     a: float      # (α₁ + α₂) / (2R)
+    tau3: float   # = 2R·C3, used in Cases (g)/(h) and Algorithm 1
 
 @dataclass
 class CalculatedParams:
@@ -67,7 +69,11 @@ def load_config(path: str) -> tuple[MeasuredDelays, PhysicalParams]:
     )
 
     m = raw["model"]
-    physical = PhysicalParams(delta_min=m["delta_min"], C=m["C"])
+    physical = PhysicalParams(
+        delta_min=m["delta_min"],
+        C=m["C"],
+        VDD=m["VDD"]
+    )
 
     return delays, physical
 
@@ -85,12 +91,15 @@ def compute_derived_constants(physical: PhysicalParams, calculated: CalculatedPa
     C = physical.C
     R5, RnA, RnB, R, alpha1, alpha2 = calculated.R5, calculated.RnA, calculated.RnB, calculated.R, calculated.alpha1, calculated.alpha2
 
+    C3 = (C * (R5 + 2 * R)) / (2 * R)
+
     return DerivedConstants(
         C1= (C * (R5 + RnA)) / RnA,
         C1_p= (C * (R5 + RnB)) / RnB,
         C2= (C * (R5 * (RnA + RnB) + RnA * RnB)) / (RnA * RnB),
-        C3= (C * (R5 + 2*R)) / 2*R,
-        a = (alpha1 + alpha2 ) / 2*R,
+        C3= C3,
+        a = (alpha1 + alpha2 ) / (2*R),
+        tau3=2 * R * C3
     )
 
 # Wrapper for calculated params (Eq. 24 - 31)
@@ -173,6 +182,7 @@ if __name__ == "__main__":
     print("\n=== Physical Parameters ===")
     print(f"  δ_min = {physical.delta_min * 1e15:.4f} fs")
     print(f"  C     = {physical.C * 1e15:.4f} fF")
+    print(f"  VDD     = {physical.VDD   :.4f} fF")
 
     params = parameterize(delays, physical)
 
@@ -190,3 +200,4 @@ if __name__ == "__main__":
     print(f"  C2     = {params.derived.C2  *1e15:.4f}")
     print(f"  C3     = {params.derived.C3  *1e15:.4f}")
     print(f"  a      = {params.derived.a   *1e12:.6f} ps/Ω")
+    print(f"  τ₃     = {params.derived.tau3}")
