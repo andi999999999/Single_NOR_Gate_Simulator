@@ -287,6 +287,10 @@ def _δVint_rising_helper(Vint, alpha_eff, params: NORModelParams):
 
 
 
+
+
+
+
 def basic_sanity_check():
     params, delays, physical = parameter_basic_sanity_test()
     VDD = params.physical.VDD
@@ -313,6 +317,3 @@ def basic_sanity_check():
 
 if __name__ == "__main__":
     basic_sanity_check()
-
-
-
