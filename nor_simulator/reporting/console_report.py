@@ -1,10 +1,12 @@
 """
 Supposed to get inputs and outputs into useful, readable format, marking if a transition is cancelled, between which input transitions an output ransition happened etc.
 """
-from simulation_algorithm import InputTransition, OutputTransition
+from nor_simulator.algorithm import InputTransition, OutputTransition
 
-
-def visualize_input_output_transitions(
+"""
+maps input and output transitions accordingly, marks cancelled transitions as well
+"""
+def print_transition_report(
         input_transitions: list[InputTransition],
         output_transitions: list[OutputTransition],
         debug_infos: list[dict] = None

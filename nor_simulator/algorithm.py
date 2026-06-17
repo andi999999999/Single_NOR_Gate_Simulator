@@ -16,36 +16,14 @@ Why N >= 2? first entry (x0, y0, t0) with t0 = -inf is initial state, only N = 2
 
 What means
 """
-from dataclasses import dataclass
 from enum import Enum
 
-import numpy as np
-
-from paper2_delay_formulas import (
+from nor_simulator.transitions import InputState, InputTransition, OutputTransition
+from nor_simulator.model.delay_formulas import (
     δ_case_a_f, δ_case_b_e, δ_case_c_d, δ_case_g, δ_case_h,
-    Vout_case_a_f, Vout_case_b_e, Vout_case_c_d, Vout_case_g, Vout_case_h
+    Vout_case_a_f, Vout_case_b_e, Vout_case_c_d, Vout_case_g, Vout_case_h, rising_trajectory_time_offset
 )
-from parameter import NORModelParams, DerivedConstants, PhysicalParams, CalculatedParams, basic_sanity_test as parameter_basic_sanity_test
-
-
-class InputState(Enum):
-    """Input signal states, syntax similar to paper"""
-    RISING  = "↑"
-    FALLING = "↓"
-    LOW     = "0-"  # stable at 0
-    HIGH    = "1-"  # stable at 1
-
-@dataclass
-class InputTransition:
-    """One entry in the input sequence I = ((x_i, y_i, t_i))."""
-    x: InputState   # input A
-    y: InputState   # input B
-    t: float        # transition time
-
-@dataclass
-class OutputTransition:
-    o: int      # 0 or 1
-    t_p: float    # Output transition time
+from nor_simulator.model.params import NORModelParams, basic_sanity_test as parameter_basic_sanity_test
 
 
 class Case(Enum):
@@ -78,15 +56,7 @@ def determine_case(x: InputState, y: InputState) -> Case:
     }
     return case_map[(x, y)]
 
-
-def case_g_h_Vout_helper(params, Vint):
-    tau3 = params.derived.tau3
-    VDD = params.physical.VDD
-
-    return tau3 * np.log(VDD / (2 * (VDD - Vint)))
-
-
-# this code could be improved, basically represents algorithm1 from paper, but could use some optimization trough refactoring
+# TODO: this code could be improved, basically represents algorithm1 from paper, but could use some optimization trough refactoring
 def algorithm1(input_transitions: list[InputTransition], params: NORModelParams, debug=False):
     O: list[OutputTransition] = []
     debug_infos: list[dict] = []
@@ -177,7 +147,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
             if Vint <= VDD/2:
                 Vint = case.Vout_func(T + delta_min, delta, Vint, params, delay)
             else:
-                Vint = case.Vout_func(T - case_g_h_Vout_helper(params, Vint) + delta_min, delta, Vint, params, delay)
+                Vint = case.Vout_func(T - rising_trajectory_time_offset(params, Vint) + delta_min, delta, Vint, params, delay)
         elif case == Case.H:
             if delta_f_temp == float('-inf'):
                 delta = -1e6    # saturated: T₁ has always been open, This is necessary, because otherwise delay formula helpers chalculations (chi) would crash, this only executes if case G/H is the first case
@@ -199,7 +169,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
             if Vint <= VDD / 2:
                 Vint = case.Vout_func(T + delta_min, delta, Vint, params, delay)
             else:
-                Vint = case.Vout_func(T - case_g_h_Vout_helper(params, Vint) + delta_min, delta, Vint, params, delay)
+                Vint = case.Vout_func(T - rising_trajectory_time_offset(params, Vint) + delta_min, delta, Vint, params, delay)
 
         if debug:
             debug_infos.append({

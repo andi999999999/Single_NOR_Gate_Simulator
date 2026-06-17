@@ -1,9 +1,10 @@
 ''' Used for Random input generation'''
 import numpy as np
 
-from simulation_algorithm import InputTransition, InputState, algorithm1
-from transition_visualizer import visualize_input_output_transitions
-from parameter import NORModelParams, DerivedConstants, PhysicalParams, CalculatedParams, basic_sanity_test as parameter_basic_sanity_test
+from nor_simulator.algorithm import InputTransition, InputState, algorithm1
+from nor_simulator.reporting.console_report import print_transition_report
+from nor_simulator.reporting.timing_diagram import plot_timing_diagram
+from nor_simulator.model.params import basic_sanity_test as parameter_basic_sanity_test
 
 ''' 
 Steps: check paper for how long delays are, how long can they be before stabalizing? Check through the paper and make random inputs accordingly
@@ -92,6 +93,30 @@ def _next_states(x: int, y: int):
 
 
 
+def make_demo_inputs(gaps_ps=None):
+    R, F, L = InputState.RISING, InputState.FALLING, InputState.LOW
+
+    # Nur A toggelt, B bleibt konstant LOW -> sauberes alternierendes Output.
+    # Abstaende schrumpfen: erst volle Stabilisierung, dann Cancellation.
+    if gaps_ps is None:
+        gaps_ps = [5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5, 0.4, 0.3, 0.2, 0.1]
+
+    # starting in state (0,0) at t = -inf -> output will be 1
+    transitions = [InputTransition(x=L, y=L, t=float("-inf"))]
+
+    t = 0.0
+    a_high = False
+    for gap in gaps_ps:
+        a_high = not a_high
+        transitions.append(InputTransition(x=L, y=R if a_high else F, t=t))
+        t += gap * 1e-12
+
+    # Dummy at the end, big gap so the last transition won't be canceled
+    transitions.append(InputTransition(x=L, y=L, t=t + 1e-6))
+    return transitions
+
+
+
 
 
 
@@ -100,7 +125,7 @@ def _next_states(x: int, y: int):
 
 # simple sanity check
 def test_random_inputs():
-    params, delays, physical = parameter_basic_sanity_test()
+    params, _, _ = parameter_basic_sanity_test()
 
     input_transitions = generate_random_inputs(
         n_transitions=30,
@@ -108,9 +133,10 @@ def test_random_inputs():
         t_max_factor=3.0,
         seed=1
     )
-    O, debug_infos = algorithm1(input_transitions, params, debug=True)
+    output_transitions, debug_infos = algorithm1(input_transitions, params, debug=True)
 
-    visualize_input_output_transitions(input_transitions, O, debug_infos)
+    print_transition_report(input_transitions, output_transitions, debug_infos)
+    plot_timing_diagram(input_transitions, output_transitions, debug_infos)
 
 
 if __name__== "__main__":

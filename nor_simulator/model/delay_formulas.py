@@ -1,11 +1,9 @@
 from dataclasses import dataclass
 
 import numpy as np
-from optype import do_le
 from scipy.special import lambertw
 
-from parameter import NORModelParams, DerivedConstants, PhysicalParams, CalculatedParams, basic_sanity_test as parameter_basic_sanity_test
-
+from nor_simulator.model.params import NORModelParams, basic_sanity_test as parameter_basic_sanity_test
 
 """Helper-variables, these are dynamically calculated, found after Eq. 11/15, depending on Δ"""
 @dataclass
@@ -285,6 +283,17 @@ def _δVint_rising_helper(Vint, alpha_eff, params: NORModelParams):
 
     return prefactor * (1 + lambertw(w_arg, k=-1).real)
 
+
+
+""" 
+helper for case g&h for calculating the offset
+in the paper this formula is specified in the algorithm itself, but since it's part of the trajectorie calculations moved it to model 
+"""
+def rising_trajectory_time_offset(params, Vint):
+    tau3 = params.derived.tau3
+    VDD = params.physical.VDD
+
+    return tau3 * np.log(VDD / (2 * (VDD - Vint)))
 
 
 
