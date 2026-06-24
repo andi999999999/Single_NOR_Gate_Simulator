@@ -8,6 +8,7 @@ def plot_timing_diagram(
     output_transitions: list[OutputTransition],
     debug_infos: list[dict] = None,
     filename: str = "timing_diagram.png",
+    vdd: float = None,
 ):
     # figuring out time window, removing start point (-infinity)
     real_times = [tr.t for tr in input_transitions if tr.t != float("-inf")]
@@ -67,6 +68,46 @@ def plot_timing_diagram(
         for d in debug_infos:
             if d["cancelled"]:
                 axes[2].axvline(d["input_t"] * 1e12, color="gray", linestyle="--", linewidth=1, alpha=0.45)
+
+    # adding line tracking vout on top of output subplot
+    if debug_infos and vdd is not None:
+        ax_v = axes[2].twinx()
+        pts = [
+            (t * 1e12, v)
+            for d in debug_infos
+            for t, v in zip(d["vout_t"], d["vout_v"])
+            if t_start <= t <= t_end
+        ]
+        if pts:
+            tt, vv = zip(*pts)
+            ax_v.plot(tt, vv, color="tab:purple", linewidth=1.0, alpha=0.85)
+        ax_v.axhline(vdd / 2, color="purple", linestyle=":", linewidth=1, alpha=0.6)
+        ax_v.set_ylim(-0.25 * vdd, 1.25 * vdd)
+        ax_v.set_ylabel("V_out [V]", rotation=0, ha="left", va="center",
+                        fontsize=9, color="tab:purple")
+        ax_v.set_yticks([0, vdd/2, vdd])
+        ax_v.tick_params(axis="y", labelcolor="tab:purple")
+        ax_v.spines["top"].set_visible(False)
+
+    # TODO (idea): make a seperate method doing this instead so can choose if wanna add line on top of output or extra plot
+    # Use this to add an aditional vout tracking subplot (instead of laying it above subplot 3 like above
+    # For that purpose add another subplot (fig, axes = plt.subplots(4...)
+    """if debug_infos and vdd is not None:
+        ax_v = axes[3]
+        pts = [(t * 1e12, v)
+               for d in debug_infos
+               for t, v in zip(d["vout_t"], d["vout_v"])
+               if t_start <= t <= t_end]
+        if pts:
+            tt, vv = zip(*pts)
+            ax_v.plot(tt, vv, color="tab:purple", linewidth=1.4)
+        ax_v.axhline(vdd / 2, color="gray", linestyle=":", linewidth=1, alpha=0.7)
+        ax_v.set_ylim(-0.05 * vdd, 1.05 * vdd)
+        ax_v.set_ylabel("V_out [V]", rotation=0, ha="right", va="center", fontsize=11)
+        ax_v.grid(True, axis="x", alpha=0.3)
+        ax_v.spines["top"].set_visible(False)
+        ax_v.spines["right"].set_visible(False)"""
+
 
     axes[-1].set_xlabel("Zeit [ps]", fontsize=11)
     fig.suptitle("NOR-Gate: Input/Output Trace", fontsize=13, fontweight="bold")

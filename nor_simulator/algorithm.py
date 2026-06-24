@@ -1,6 +1,7 @@
 """
-Note to self:
+"Line" in the code referes to the line of the Algorithm in the Paper
 
+Note to self:
 Meaning of variables:
 - T: t_current-input - t_previous-output - Distance Previous Output to current Input
 - t from V_out(t): time from begin of current trajectory
@@ -13,10 +14,10 @@ Meaning of variables:
 - o_i and t'_i: o_i∈{0,1} - digital value of output transition, t'_i global point in time
 
 Why N >= 2? first entry (x0, y0, t0) with t0 = -inf is initial state, only N = 2 is the first real transition.
-
-What means
 """
 from enum import Enum
+
+import numpy as np
 
 from nor_simulator.transitions import InputState, InputTransition, OutputTransition
 from nor_simulator.model.delay_formulas import (
@@ -56,6 +57,13 @@ def determine_case(x: InputState, y: InputState) -> Case:
     }
     return case_map[(x, y)]
 
+def sample_segment(vout_local, t_lo, t_hi, origin, n=50):
+    if t_hi <= t_lo:                 # nichts Sinnvolles zu zeichnen (z.B. überholte Segmente)
+        return [], []
+    tl = np.linspace(t_lo, t_hi, n)
+    vs = vout_local(tl)                       # vectorising
+    return (tl + origin).tolist(), np.asarray(vs).tolist()
+
 # TODO: this code could be improved, basically represents algorithm1 from paper, but could use some optimization trough refactoring
 def algorithm1(input_transitions: list[InputTransition], params: NORModelParams, debug=False):
     O: list[OutputTransition] = []
@@ -74,7 +82,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
     delta_min = params.physical.delta_min
 
     # Line 2: current state
-    current_transition = input_transitions[0]    # initial state, at t_0 = -∞ TODO: should I check that? if first trnasition meets that?
+    current_transition = input_transitions[0]    # initial state, at t_0 = -∞
     assert current_transition.t == float('-inf'), "First transition must be at t = -∞"
 
     # Line 3 -6
@@ -96,7 +104,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
         case = determine_case(current_transition.x, current_transition.y)
 
         if case == Case.A or case == Case.B or case == Case.C or case == Case.D:
-            delay = case.delay_func(Vint, params) # a, b, c, d requires these 2 arguments, this could be solved more estetically i am aware, but is pragmatic
+            delay = case.delay_func(Vint, params) # a, b, c, d requires these 2 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
@@ -107,6 +115,16 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
             T = t_next - t_o
             Vint = case.Vout_func(T + delta_min, params)
+
+
+            # for generating V_out traces
+            seg_t, seg_v = [], []
+            if debug:
+                vout_local = lambda tl: case.Vout_func(tl, params)
+                seg_t, seg_v = sample_segment(
+                    vout_local, t_lo=delta_min - delay, t_hi=T + delta_min,
+                    origin=t_o - delta_min,
+                )
 
         elif case == Case.E or case == Case.F:
             if case == Case.E:
@@ -114,7 +132,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
             elif case == Case.F:
                 delta_f_temp = current_transition.t
 
-            delay = case.delay_func(Vint, params) # e, f requires these 2 arguments, this could be solved more estetically i am aware, but is pragmatic
+            delay = case.delay_func(Vint, params) # e, f requires these 2 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
@@ -125,6 +143,16 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
             T = t_next - t_o
             Vint = case.Vout_func(T + delta_min, params)
+
+
+            # for generating V_out traces
+            seg_t, seg_v = [], []
+            if debug:
+                vout_local = lambda tl: case.Vout_func(tl, params)
+                seg_t, seg_v = sample_segment(
+                    vout_local, t_lo=delta_min - delay, t_hi=T + delta_min,
+                    origin=t_o - delta_min,
+                )
 
         elif case == Case.G:
             if delta_e_temp == float('-inf'):
@@ -133,7 +161,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
                 delta = current_transition.t - delta_e_temp
             delta_f_temp = current_transition.t # for computing delta in case h
 
-            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically i am aware, but is pragmatic
+            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
@@ -144,10 +172,27 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
             T = t_next - t_o
             # def Vout_case_g(t, delta, Vint, params, delay_g):
-            if Vint <= VDD/2:
-                Vint = case.Vout_func(T + delta_min, delta, Vint, params, delay)
-            else:
-                Vint = case.Vout_func(T - rising_trajectory_time_offset(params, Vint) + delta_min, delta, Vint, params, delay)
+            vint_start = Vint
+            offset = 0.0 if vint_start <= VDD / 2 else rising_trajectory_time_offset(params, vint_start)
+            arg_next = T - offset + delta_min
+            Vint = case.Vout_func(arg_next, delta, vint_start, params, delay)
+
+
+
+            # for generating v_out traces
+            seg_t, seg_v = [], []
+            if debug:
+                vout_local = lambda tl: case.Vout_func(tl, delta, vint_start, params, delay)
+                # The rising Vout formulas are only valid forward from the VDD/2 crossing (t >= 0).
+                # For negative t, e_factor = np.exp(-t / tau3) grows without bound (exp of a positive number),
+                # which pushes the sampled curve far past the rails -> a spike in the plot.
+                # So for the rising cases we clamp the sample window to t_lo = 0.0 (the crossing, where e_factor = 1, Vout = VDD/2).
+                # Falling needs no clamp: there Vout(t_lo) evaluates exactly to Vint, so it stays bounded.
+                seg_t, seg_v = sample_segment(
+                    vout_local,  t_lo=max(0.0, delta_min - offset - delay), t_hi=arg_next,
+                    origin=t_o - delta_min + offset,
+                )
+
         elif case == Case.H:
             if delta_f_temp == float('-inf'):
                 delta = -1e6    # saturated: T₁ has always been open, This is necessary, because otherwise delay formula helpers chalculations (chi) would crash, this only executes if case G/H is the first case
@@ -155,7 +200,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
                 delta = delta_f_temp - current_transition.t
             delta_e_temp = current_transition.t  # for computing delta in case g
 
-            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically i am aware, but is pragmatic
+            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
@@ -166,10 +211,26 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
             T = t_next - t_o
             # def Vout_case_g(t, delta, Vint, params, delay_g):
-            if Vint <= VDD / 2:
-                Vint = case.Vout_func(T + delta_min, delta, Vint, params, delay)
-            else:
-                Vint = case.Vout_func(T - rising_trajectory_time_offset(params, Vint) + delta_min, delta, Vint, params, delay)
+            vint_start = Vint
+            offset = 0.0 if vint_start <= VDD / 2 else rising_trajectory_time_offset(params, vint_start)
+            arg_next = T - offset + delta_min
+            Vint = case.Vout_func(arg_next, delta, vint_start, params, delay)
+
+
+
+            # for generating v_out traces
+            seg_t, seg_v = [], []
+            if debug:
+                vout_local = lambda tl: case.Vout_func(tl, delta, vint_start, params, delay)
+                # The rising Vout formulas are only valid forward from the VDD/2 crossing (t >= 0).
+                # For negative t, e_factor = np.exp(-t / tau3) grows without bound (exp of a positive number),
+                # which pushes the sampled curve far past the rails -> a spike in the plot.
+                # So for the rising cases we clamp the sample window to t_lo = 0.0 (the crossing, where e_factor = 1, Vout = VDD/2).
+                # Falling needs no clamp: there Vout(t_lo) evaluates exactly to Vint, so it stays bounded.
+                seg_t, seg_v = sample_segment(
+                    vout_local,  t_lo=max(0.0, delta_min - offset - delay), t_hi=arg_next,
+                    origin=t_o - delta_min + offset,
+                )
 
         if debug:
             debug_infos.append({
@@ -179,6 +240,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
                 "Vint": Vint,
                 "cancelled": is_cancelled,
                 "input_t": current_transition.t,
+                "vout_t": seg_t, "vout_v": seg_v,
             })
 
         index_input += 1

@@ -10,7 +10,7 @@ def main():
     inputs = make_demo_inputs()
     output, debug = algorithm1(inputs, params, debug=True)
     print_transition_report(inputs, output, debug)
-    plot_timing_diagram(inputs, output, debug)
+    plot_timing_diagram(inputs, output, debug, vdd=params.physical.VDD)
 
 if __name__ == "__main__":
     main()
