@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 from nor_simulator.transitions import InputState, InputTransition
 from nor_simulator.model.params import load_config, parameterize
-from nor_simulator.algorithm import algorithm1, determine_case, Case
+from nor_simulator.algorithm import simulate_nor, determine_case, Case
 
 CONFIG = Path(__file__).resolve().parent.parent / "gate_params.toml"
 R, F, L, H = InputState.RISING, InputState.FALLING, InputState.LOW, InputState.HIGH
@@ -17,8 +17,8 @@ def model():
 
 def _run(params, *transitions):
     """runs algorithm, returns real outputs (removes -inf initial state)."""
-    O = algorithm1(list(transitions), params)
-    return [o for o in O if o.t_p != NINF]
+    nor_output_transitions, _ = simulate_nor(list(transitions), params)
+    return [o for o in nor_output_transitions if o.t_p != NINF]
 
 """ -----round-trip test through the algorithm, each case testing----- """
 
@@ -87,12 +87,12 @@ def test_determine_case(x, y, expected):
 
 def test_initial_state_low_low(model):
     params, _ = model
-    O = algorithm1([InputTransition(x=L, y=L, t=NINF),
-                    InputTransition(x=R, y=L, t=0.0), DUMMY], params)
-    assert O[0].o == 1 and O[0].t_p == NINF # LL → Output starts at 1 (Vint=VDD)
+    nor_output_transitions, _ = simulate_nor([InputTransition(x=L, y=L, t=NINF),
+                                              InputTransition(x=R, y=L, t=0.0), DUMMY], params)
+    assert nor_output_transitions[0].o == 1 and nor_output_transitions[0].t_p == NINF # LL → Output starts at 1 (Vint=VDD)
 
 def test_initial_state_not_low_low(model):
     params, _ = model
-    O = algorithm1([InputTransition(x=H, y=H, t=NINF),
-                    InputTransition(x=F, y=H, t=0.0), DUMMY], params)
-    assert O[0].o == 0 and O[0].t_p == NINF  # other cases → Output starts at0
+    nor_output_transitions, _ = simulate_nor([InputTransition(x=H, y=H, t=NINF),
+                                              InputTransition(x=F, y=H, t=0.0), DUMMY], params)
+    assert nor_output_transitions[0].o == 0 and nor_output_transitions[0].t_p == NINF  # other cases → Output starts at0

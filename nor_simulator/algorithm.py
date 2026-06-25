@@ -1,5 +1,6 @@
 """
-"Line" in the code referes to the line of the Algorithm in the Paper
+This file implements the algorithms for both NOR and NAND (by transformation)
+"Line" in the "simulate_nor" method referes to the line of the Algorithm in the Paper
 
 Note to self:
 Meaning of variables:
@@ -59,15 +60,16 @@ def determine_case(x: InputState, y: InputState) -> Case:
     return case_map[(x, y)]
 
 def sample_segment(vout_local, t_lo, t_hi, origin, n=50):
-    if t_hi <= t_lo:                 # nichts Sinnvolles zu zeichnen (z.B. überholte Segmente)
+    if t_hi <= t_lo:                        # nothing useful to sample
         return [], []
     tl = np.linspace(t_lo, t_hi, n)
-    vs = vout_local(tl)                       # vectorising
+    vs = vout_local(tl)                     # vectorising
     return (tl + origin).tolist(), np.asarray(vs).tolist()
 
-# TODO: this code could be improved, basically represents algorithm1 from paper, but could use some optimization trough refactoring
-def algorithm1(input_transitions: list[InputTransition], params: NORModelParams, debug=False):
-    O: list[OutputTransition] = []
+# TODO: could use some optimization trough refactoring
+def simulate_nor(input_transitions: list[InputTransition], params: NORModelParams, debug=False):
+    """ implements Algorithm 1 from Paper "Drafting and Multi-Input Switching in Digital Dynamic Timing Simulation for Multi-Input Gates" """
+    nor_output_transitions: list[OutputTransition] = []
     debug_infos: list[dict] = []
 
     # Line 1: initializing variables
@@ -88,10 +90,10 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
     # Line 3 -6
     if (current_transition.x == InputState.LOW and current_transition.y == InputState.LOW):
-        O.append(OutputTransition(o=1, t_p=float('-inf')))   # -∞
+        nor_output_transitions.append(OutputTransition(o=1, t_p=float('-inf')))   # -∞
         Vint = VDD
     else:
-        O.append(OutputTransition(o=0, t_p=float('-inf')))  # -∞
+        nor_output_transitions.append(OutputTransition(o=0, t_p=float('-inf')))  # -∞
         Vint = 0.0
 
     # Line 7
@@ -112,7 +114,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
             # Cancellation check, so I dont have to add first and them remove again.
             is_cancelled = (t_o - delta_min < current_transition.t) or (t_o - delta_min > t_next)
             if not is_cancelled:
-                O.append(OutputTransition(o=0, t_p=t_o))
+                nor_output_transitions.append(OutputTransition(o=0, t_p=t_o))
 
             T = t_next - t_o
             Vint = case.Vout_func(T + delta_min, params)
@@ -140,7 +142,7 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
             # Cancellation check, so I dont have to add first and them remove again.
             is_cancelled = (t_o - delta_min < current_transition.t) or (t_o - delta_min > t_next)
             if not is_cancelled:
-                O.append(OutputTransition(o=0, t_p=t_o))
+                nor_output_transitions.append(OutputTransition(o=0, t_p=t_o))
 
             T = t_next - t_o
             Vint = case.Vout_func(T + delta_min, params)
@@ -162,14 +164,14 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
                 delta = current_transition.t - delta_e_temp
             delta_f_temp = current_transition.t # for computing delta in case h
 
-            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically, but is pragmatic
+            delay = case.delay_func(delta, Vint, params)  # g/h requires these 3 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
             # Cancellation check, so I dont have to add first and them remove again.
             is_cancelled = (t_o - delta_min < current_transition.t) or (t_o - delta_min > t_next)
             if not is_cancelled:
-                O.append(OutputTransition(o=1, t_p=t_o))
+                nor_output_transitions.append(OutputTransition(o=1, t_p=t_o))
 
             T = t_next - t_o
             # def Vout_case_g(t, delta, Vint, params, delay_g):
@@ -201,14 +203,14 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
                 delta = delta_f_temp - current_transition.t
             delta_e_temp = current_transition.t  # for computing delta in case g
 
-            delay = case.delay_func(delta, Vint, params)  # g requires these 3 arguments, this could be solved more estetically, but is pragmatic
+            delay = case.delay_func(delta, Vint, params)  # g/h requires these 3 arguments, this could be solved more estetically, but is pragmatic
             t_o = current_transition.t + delay
 
             # Line 13 + Line 15 on
             # Cancellation check, so I dont have to add first and them remove again.
             is_cancelled = (t_o - delta_min < current_transition.t) or (t_o - delta_min > t_next)
             if not is_cancelled:
-                O.append(OutputTransition(o=1, t_p=t_o))
+                nor_output_transitions.append(OutputTransition(o=1, t_p=t_o))
 
             T = t_next - t_o
             # def Vout_case_g(t, delta, Vint, params, delay_g):
@@ -246,24 +248,51 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
 
         index_input += 1
 
-    if debug:
-        return O, debug_infos
-    return O
+    return nor_output_transitions, debug_infos
 
 
-"""        
-        (R, L): Case.A,
-        (L, R): Case.B,
-        (H, R): Case.C,
-        (R, H): Case.D,
-        (F, H): Case.E,
-        (H, F): Case.F,
-        (L, F): Case.G,
-        (F, L): Case.H,
-        
-"""
+_NEGATE = {
+    InputState.RISING:  InputState.FALLING,
+    InputState.FALLING: InputState.RISING,
+    InputState.HIGH:    InputState.LOW,
+    InputState.LOW:     InputState.HIGH,
+}
 
-def print_algorithm_report():
+def simulate_nand(input_transitions: list[InputTransition], params: NORModelParams, debug=False):
+    """ This method simulates a NAND gate using the original (NOR) algorithm by making apropriate transformations.
+    This works because both are very similar and can transform through a few negations
+
+    Specifically by negating inputs and negating outputs
+    """
+    nor_input_transitions = [
+        InputTransition(x=_NEGATE[tr.x], y=_NEGATE[tr.y], t=tr.t)
+        for tr in input_transitions
+    ]
+
+    nor_output_transitions, nor_debug = simulate_nor(nor_input_transitions, params, debug) # negated from the view of NAND, since we used the NOR algorithm
+    nand_output_transitions = [OutputTransition(1 - o_tr.o, o_tr.t_p) for o_tr in nor_output_transitions]
+
+    return nand_output_transitions, [_to_nand_debug(d, params) for d in nor_debug]
+
+NAND_FROM_NOR = {
+    "a": "e", "b": "f", "c": "g", "d": "h",
+    "e": "a", "f": "b", "g": "c", "h": "d",
+}
+
+def _to_nand_debug(nor_debug: dict, params: NORModelParams):
+    vdd = params.physical.VDD
+    rest = {k: v for k, v in nor_debug.items() if k != "case"}
+
+    return {
+        "case_nand": NAND_FROM_NOR[nor_debug["case"]],
+        "case_nor_equivalent": nor_debug["case"],
+        **rest, #note to self: dictonary unpacking, adds entries to new dict
+        "Vint": vdd - nor_debug["Vint"],
+        "vout_v": [ vdd - vout_v_nor for vout_v_nor in nor_debug["vout_v"] ],
+    }
+
+
+def print_nor_simulation_report():
     parser = argparse.ArgumentParser(description="Algorithm report - comparing calculated to real delays side by side")
     parser.add_argument("config", nargs="?", default="gate_params.toml",
                         help="Path to gate_params.toml (Default: gate_params.toml)")
@@ -283,8 +312,8 @@ def print_algorithm_report():
         InputTransition(x=R, y=L, t=0.0),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     print(f"δ↓_S(+∞):  expected={delays.S_fall_pos*1e12:.4f} ps,  got={real[0].t_p*1e12:.4f} ps")
 
     # === Test 2: δ↓_S(-∞): only B rises (Case b) ===
@@ -293,8 +322,8 @@ def print_algorithm_report():
         InputTransition(x=L, y=R, t=0.0),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     print(f"δ↓_S(-∞):  expected={delays.S_fall_neg*1e12:.4f} ps,  got={real[0].t_p*1e12:.4f} ps")
 
     # === Test 3: δ↓_S(0):both rise at the same time ===
@@ -304,8 +333,8 @@ def print_algorithm_report():
         InputTransition(x=H, y=R, t=0.0),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     print(f"δ↓_S(0):   expected={delays.S_fall_0*1e12:.4f} ps,  got={real[-1].t_p*1e12:.4f} ps")
 
     # === Test 4: δ↑_S(0): both falling at the same time ===
@@ -315,8 +344,8 @@ def print_algorithm_report():
         InputTransition(x=L, y=F, t=0.0),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     print(f"δ↑_S(0):   expected={delays.S_rise_0*1e12:.4f} ps,  got={real[-1].t_p*1e12:.4f} ps")
 
     # === Test 5: δ↑_S(+∞): A falls a long time before B ===
@@ -326,8 +355,8 @@ def print_algorithm_report():
         InputTransition(x=L, y=F, t=GAP),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     delay = real[-1].t_p - GAP
     print(f"δ↑_S(+∞):  expected={delays.S_rise_pos*1e12:.4f} ps,  got={delay*1e12:.4f} ps")
 
@@ -338,12 +367,12 @@ def print_algorithm_report():
         InputTransition(x=F, y=L, t=GAP),
         DUMMY,
     ]
-    O = algorithm1(inputs, params)
-    real = [o for o in O if o.t_p != float('-inf')]
+    nor_output_transitions, _ = simulate_nor(inputs, params)
+    real = [o for o in nor_output_transitions if o.t_p != float('-inf')]
     delay = real[-1].t_p - GAP
     print(f"δ↑_S(-∞):  expected={delays.S_rise_neg*1e12:.4f} ps,  got={delay*1e12:.4f} ps")
 
 
 if __name__ == "__main__":
-    print_algorithm_report()
+    print_nor_simulation_report()
 

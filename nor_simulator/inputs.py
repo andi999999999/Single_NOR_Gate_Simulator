@@ -3,7 +3,7 @@ import argparse
 
 import numpy as np
 
-from nor_simulator.algorithm import InputTransition, InputState, algorithm1
+from nor_simulator.algorithm import InputTransition, InputState, simulate_nor
 from nor_simulator.reporting.console_report import print_transition_report
 from nor_simulator.reporting.timing_diagram import plot_timing_diagram
 from nor_simulator.model.params import parameterize, load_config
@@ -135,16 +135,16 @@ def test_random_inputs():
     delays, physical = load_config(args.config)
     params = parameterize(delays, physical)
 
-    input_transitions = generate_random_inputs(
+    nor_input_transitions = generate_random_inputs(
         n_transitions=30,
         max_delay=4.1e-12,
         t_max_factor=3.0,
         seed=1
     )
-    output_transitions, debug_infos = algorithm1(input_transitions, params, debug=True)
+    nor_output_transitions, debug_infos = simulate_nor(nor_input_transitions, params, debug=True)
 
-    print_transition_report(input_transitions, output_transitions, debug_infos)
-    plot_timing_diagram(input_transitions, output_transitions, debug_infos)
+    print_transition_report(nor_input_transitions, nor_output_transitions, debug_infos)
+    plot_timing_diagram(nor_input_transitions, nor_output_transitions, debug_infos)
 
 
 if __name__== "__main__":
