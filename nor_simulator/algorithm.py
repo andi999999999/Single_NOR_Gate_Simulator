@@ -15,6 +15,7 @@ Meaning of variables:
 
 Why N >= 2? first entry (x0, y0, t0) with t0 = -inf is initial state, only N = 2 is the first real transition.
 """
+import argparse
 from enum import Enum
 
 import numpy as np
@@ -24,7 +25,7 @@ from nor_simulator.model.delay_formulas import (
     δ_case_a_f, δ_case_b_e, δ_case_c_d, δ_case_g, δ_case_h,
     Vout_case_a_f, Vout_case_b_e, Vout_case_c_d, Vout_case_g, Vout_case_h, rising_trajectory_time_offset
 )
-from nor_simulator.model.params import NORModelParams, basic_sanity_test as parameter_basic_sanity_test
+from nor_simulator.model.params import NORModelParams, load_config, parameterize
 
 
 class Case(Enum):
@@ -262,8 +263,87 @@ def algorithm1(input_transitions: list[InputTransition], params: NORModelParams,
         
 """
 
+def print_algorithm_report():
+    parser = argparse.ArgumentParser(description="Algorithm report - comparing calculated to real delays side by side")
+    parser.add_argument("config", nargs="?", default="gate_params.toml",
+                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    args = parser.parse_args()
+
+    delays, physical = load_config(args.config)
+    params = parameterize(delays, physical)
+    GAP = 1e-9
+    R, F, L, H = InputState.RISING, InputState.FALLING, InputState.LOW, InputState.HIGH
+    DUMMY = InputTransition(x=L, y=L, t=1e-6)
+
+    print("=== Algorithm report: MIS-Delays calculated using Algorithm 1 ===\n")
+
+    # === Test 1: δ↓_S(+∞): only A rises (Case a) ===
+    inputs = [
+        InputTransition(x=L, y=L, t=float('-inf')),
+        InputTransition(x=R, y=L, t=0.0),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    print(f"δ↓_S(+∞):  expected={delays.S_fall_pos*1e12:.4f} ps,  got={real[0].t_p*1e12:.4f} ps")
+
+    # === Test 2: δ↓_S(-∞): only B rises (Case b) ===
+    inputs = [
+        InputTransition(x=L, y=L, t=float('-inf')),
+        InputTransition(x=L, y=R, t=0.0),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    print(f"δ↓_S(-∞):  expected={delays.S_fall_neg*1e12:.4f} ps,  got={real[0].t_p*1e12:.4f} ps")
+
+    # === Test 3: δ↓_S(0):both rise at the same time ===
+    inputs = [
+        InputTransition(x=L, y=L, t=float('-inf')),
+        InputTransition(x=R, y=L, t=0.0),
+        InputTransition(x=H, y=R, t=0.0),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    print(f"δ↓_S(0):   expected={delays.S_fall_0*1e12:.4f} ps,  got={real[-1].t_p*1e12:.4f} ps")
+
+    # === Test 4: δ↑_S(0): both falling at the same time ===
+    inputs = [
+        InputTransition(x=H, y=H, t=float('-inf')),
+        InputTransition(x=F, y=H, t=0.0),
+        InputTransition(x=L, y=F, t=0.0),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    print(f"δ↑_S(0):   expected={delays.S_rise_0*1e12:.4f} ps,  got={real[-1].t_p*1e12:.4f} ps")
+
+    # === Test 5: δ↑_S(+∞): A falls a long time before B ===
+    inputs = [
+        InputTransition(x=H, y=H, t=float('-inf')),
+        InputTransition(x=F, y=H, t=0.0),
+        InputTransition(x=L, y=F, t=GAP),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    delay = real[-1].t_p - GAP
+    print(f"δ↑_S(+∞):  expected={delays.S_rise_pos*1e12:.4f} ps,  got={delay*1e12:.4f} ps")
+
+    # === Test 6: δ↑_S(-∞): B falls long before A ===
+    inputs = [
+        InputTransition(x=H, y=H, t=float('-inf')),
+        InputTransition(x=H, y=F, t=0.0),
+        InputTransition(x=F, y=L, t=GAP),
+        DUMMY,
+    ]
+    O = algorithm1(inputs, params)
+    real = [o for o in O if o.t_p != float('-inf')]
+    delay = real[-1].t_p - GAP
+    print(f"δ↑_S(-∞):  expected={delays.S_rise_neg*1e12:.4f} ps,  got={delay*1e12:.4f} ps")
 
 
 if __name__ == "__main__":
-    basic_sanity_check()
+    print_algorithm_report()
 
