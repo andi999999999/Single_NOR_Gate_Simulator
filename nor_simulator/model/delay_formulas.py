@@ -1,9 +1,10 @@
+import argparse
 from dataclasses import dataclass
 
 import numpy as np
 from scipy.special import lambertw
 
-from nor_simulator.model.params import NORModelParams, basic_sanity_test as parameter_basic_sanity_test
+from nor_simulator.model.params import NORModelParams, load_config, parameterize
 
 """Helper-variables, these are dynamically calculated, found after Eq. 11/15, depending on Δ"""
 @dataclass
@@ -124,10 +125,13 @@ def _tau_case_c_d(params):
 """   --- helper methods for: δ↓ = falling Output (Eq. 32-37) --- """
 # helper method for δ↓ formulas 32, 34, 36, as they are similar in structure
 def _δ_falling_helper(Vint, tau, params: NORModelParams):
+    """Delay of dropping until VDD/2 - defined for Vint ∈ (0, VDD]. Case Vint == 0 (Output fully discharged) δ → -inf
+    this will be dropped through cancellation, occures when initial state ≠ (L,L)
+    """
     VDD = params.physical.VDD
     delta_min = params.physical.delta_min
-
-    return tau * np.log(2 * Vint / VDD) + delta_min
+    with np.errstate(divide="ignore"):  # log(0) can occur if Vint=0, this is expected behaviout, in that case -inf is returned correctly by np
+        return tau * np.log(2 * Vint / VDD) + delta_min
 
 # helper method for δ↓ formulas 33, 35, 37, as they are similar in structure
 def _Vout_falling_helper(t, tau, params: NORModelParams):
@@ -300,8 +304,7 @@ def rising_trajectory_time_offset(params, Vint):
 
 
 
-def basic_sanity_check():
-    params, delays, physical = parameter_basic_sanity_test()
+def print_delays_report(params, delays):
     VDD = params.physical.VDD
 
     print("\n\n=============== Delay Formulas sanity check ===============")
@@ -325,4 +328,12 @@ def basic_sanity_check():
 
 
 if __name__ == "__main__":
-    basic_sanity_check()
+    parser = argparse.ArgumentParser(description="SPICE-Delays vs. Modell-Delays Report")
+    parser.add_argument("config", nargs="?", default="gate_params.toml",
+                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    args = parser.parse_args()
+
+    delays, physical = load_config(args.config)
+    params = parameterize(delays, physical)
+
+    print_delays_report(params, delays)
