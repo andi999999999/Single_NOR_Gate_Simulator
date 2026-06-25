@@ -1,3 +1,4 @@
+import argparse
 import tomllib
 import numpy as np
 from dataclasses import dataclass
@@ -169,8 +170,13 @@ def A_eq28(t, R, R5, C):
 
 
 
-def basic_sanity_test():
-    delays, physical = load_config("gate_params.toml")
+def print_params_report():
+    parser = argparse.ArgumentParser(description="Params Report.")
+    parser.add_argument("config", nargs="?", default="gate_params.toml",
+                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    args = parser.parse_args()
+
+    delays, physical = load_config(args.config)
 
     print("=== Loaded Delays ===")
     print(f"  δ↓_S(-∞) = {delays.S_fall_neg*1e12:.4f} ps")
@@ -206,4 +212,4 @@ def basic_sanity_test():
     return params, delays, physical
 
 if __name__ == "__main__":
-    basic_sanity_test()
+    print_params_report()

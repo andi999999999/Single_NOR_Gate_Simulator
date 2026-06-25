@@ -1,10 +1,12 @@
 ''' Used for Random input generation'''
+import argparse
+
 import numpy as np
 
 from nor_simulator.algorithm import InputTransition, InputState, algorithm1
 from nor_simulator.reporting.console_report import print_transition_report
 from nor_simulator.reporting.timing_diagram import plot_timing_diagram
-from nor_simulator.model.params import basic_sanity_test as parameter_basic_sanity_test
+from nor_simulator.model.params import parameterize, load_config
 
 ''' 
 Steps: check paper for how long delays are, how long can they be before stabalizing? Check through the paper and make random inputs accordingly
@@ -125,7 +127,13 @@ def make_demo_inputs(gaps_ps=None):
 
 # simple sanity check
 def test_random_inputs():
-    params, _, _ = parameter_basic_sanity_test()
+    parser = argparse.ArgumentParser(description="Generates a couple random transitions, prints a console-transition-report and generates a timing diagram (plot).")
+    parser.add_argument("config", nargs="?", default="gate_params.toml",
+                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    args = parser.parse_args()
+
+    delays, physical = load_config(args.config)
+    params = parameterize(delays, physical)
 
     input_transitions = generate_random_inputs(
         n_transitions=30,
