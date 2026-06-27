@@ -237,6 +237,7 @@ def simulate_nor(input_transitions: list[InputTransition], params: NORModelParam
 
         if debug:
             debug_infos.append({
+                "gate_type": "NOR",
                 "case": case.label,
                 "t_o": t_o,
                 "delay": delay,
@@ -287,6 +288,7 @@ def _to_nand_debug(nor_debug: dict, params: NORModelParams):
         "case_nand": NAND_FROM_NOR[nor_debug["case"]],
         "case_nor_equivalent": nor_debug["case"],
         **rest, #note to self: dictonary unpacking, adds entries to new dict
+        "gate_type": "NAND",
         "Vint": vdd - nor_debug["Vint"],
         "vout_v": [ vdd - vout_v_nor for vout_v_nor in nor_debug["vout_v"] ],
     }

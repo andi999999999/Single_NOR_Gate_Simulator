@@ -59,7 +59,15 @@ def print_output_transition(output_transition: OutputTransition, debug: dict = N
     line = f"  Output: → {output_transition.o} at t: {output_transition.t_p * 1e12:.4f} ps"
 
     if debug:
-        line += f"  |  Case {debug['case']}, Vint={debug['Vint']:.6f}, delay={debug['delay'] * 1e12:.4f} ps"
+        case: str
+        gate_type = debug.get('gate_type')
+
+        if gate_type == "NOR":
+            case = debug['case']
+        elif gate_type == "NAND":
+            case = debug['case_nand']
+
+        line += f"  |  Case {case}, Vint={debug['Vint']:.6f}, delay={debug['delay'] * 1e12:.4f} ps"
 
     print(line)
 
@@ -68,6 +76,14 @@ def print_cancelled(debug: dict = None):
     line = "  Output: → CANCELLED"
 
     if debug:
-        line += f"  |  Case {debug['case']}, Vint={debug['Vint']:.6f}, t_o={debug['t_o'] * 1e12:.4f} ps, delay={debug['delay'] * 1e12:.4f} ps"
+        case: str
+        gate_type = debug.get('gate_type')
+
+        if gate_type == "NOR":
+            case = debug['case']
+        elif gate_type == "NAND":
+            case = debug['case_nand']
+
+        line += f"  |  Case {case}, Vint={debug['Vint']:.6f}, t_o={debug['t_o'] * 1e12:.4f} ps, delay={debug['delay'] * 1e12:.4f} ps"
 
     print(line)

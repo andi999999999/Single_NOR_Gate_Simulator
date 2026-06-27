@@ -2,6 +2,23 @@ import matplotlib.pyplot as plt
 
 from nor_nand_simulator.transitions import InputTransition, OutputTransition, InputState
 
+def plot_timing_diagram_nor(
+    input_transitions: list[InputTransition],
+    output_transitions: list[OutputTransition],
+    debug_infos: list[dict] = None,
+    filename: str = "timing_diagram_nor.png",
+    vdd: float = None,
+):
+    plot_timing_diagram(input_transitions, output_transitions, debug_infos, filename, vdd, gatetype="NOR")
+
+def plot_timing_diagram_nand(
+    input_transitions: list[InputTransition],
+    output_transitions: list[OutputTransition],
+    debug_infos: list[dict] = None,
+    filename: str = "timing_diagram_nand.png",
+    vdd: float = None,
+):
+    plot_timing_diagram(input_transitions, output_transitions, debug_infos, filename, vdd, gatetype="NAND")
 
 def plot_timing_diagram(
     input_transitions: list[InputTransition],
@@ -9,6 +26,7 @@ def plot_timing_diagram(
     debug_infos: list[dict] = None,
     filename: str = "timing_diagram.png",
     vdd: float = None,
+    gatetype: str = "unknown",
 ):
     # figuring out time window, removing start point (-infinity)
     real_times = [tr.t for tr in input_transitions if tr.t != float("-inf")]
@@ -110,7 +128,7 @@ def plot_timing_diagram(
 
 
     axes[-1].set_xlabel("Zeit [ps]", fontsize=11)
-    fig.suptitle("NOR-Gate: Input/Output Trace", fontsize=13, fontweight="bold")
+    fig.suptitle(gatetype + "-Gate: Input/Output Trace", fontsize=13, fontweight="bold")
     fig.tight_layout()
     fig.savefig(filename, dpi=200, bbox_inches="tight")
     #plt.show()
