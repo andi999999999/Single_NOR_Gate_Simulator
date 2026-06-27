@@ -1,5 +1,5 @@
 """
-This file implements the algorithms for both NOR and NAND (by transformation)
+This file implements the algorithms for both NOR and NAND (by De-Morgan transformation)
 "Line" in the "simulate_nor" method referes to the line of the Algorithm in the Paper
 
 Note to self:
@@ -21,12 +21,12 @@ from enum import Enum
 
 import numpy as np
 
-from nor_simulator.transitions import InputState, InputTransition, OutputTransition
-from nor_simulator.model.delay_formulas import (
+from nor_nand_simulator.transitions import InputState, InputTransition, OutputTransition
+from nor_nand_simulator.model.delay_formulas import (
     δ_case_a_f, δ_case_b_e, δ_case_c_d, δ_case_g, δ_case_h,
     Vout_case_a_f, Vout_case_b_e, Vout_case_c_d, Vout_case_g, Vout_case_h, rising_trajectory_time_offset
 )
-from nor_simulator.model.params import NORModelParams, load_config, parameterize
+from nor_nand_simulator.model.params import NORModelParams, load_config, parameterize_nor
 
 
 class Case(Enum):
@@ -159,7 +159,7 @@ def simulate_nor(input_transitions: list[InputTransition], params: NORModelParam
 
         elif case == Case.G:
             if delta_e_temp == float('-inf'):
-                delta = 1e6     # saturated: T₁ has always been open, This is necessary, because otherwise delay formula helpers chalculations (chi) would crash, this only executes if case G/H is the first case
+                delta = 1e6     # saturated: T₁ has always been open, This is necessary, because otherwise delay formula helpers calculations (chi) would crash, this only executes if case G/H is the first case
             else:
                 delta = current_transition.t - delta_e_temp
             delta_f_temp = current_transition.t # for computing delta in case h
@@ -291,15 +291,15 @@ def _to_nand_debug(nor_debug: dict, params: NORModelParams):
         "vout_v": [ vdd - vout_v_nor for vout_v_nor in nor_debug["vout_v"] ],
     }
 
-
+# TODO (optional): This does currently not support NAND, but NAND uses same calculations underneath
 def print_nor_simulation_report():
     parser = argparse.ArgumentParser(description="Algorithm report - comparing calculated to real delays side by side")
-    parser.add_argument("config", nargs="?", default="gate_params.toml",
-                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    parser.add_argument("config", nargs="?", default="nor_gate_params.toml",
+                        help="Path to nor_gate_params.toml (Default: nor_gate_params.toml)")
     args = parser.parse_args()
 
     delays, physical = load_config(args.config)
-    params = parameterize(delays, physical)
+    params = parameterize_nor(delays, physical)
     GAP = 1e-9
     R, F, L, H = InputState.RISING, InputState.FALLING, InputState.LOW, InputState.HIGH
     DUMMY = InputTransition(x=L, y=L, t=1e-6)

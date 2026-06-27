@@ -1,7 +1,7 @@
 """
 Supposed to get inputs and outputs into useful, readable format, marking if a transition is cancelled, between which input transitions an output ransition happened etc.
 """
-from nor_simulator.algorithm import InputTransition, OutputTransition
+from nor_nand_simulator.algorithm import InputTransition, OutputTransition
 
 """
 maps input and output transitions accordingly, marks cancelled transitions as well

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.special import lambertw
 
-from nor_simulator.model.params import NORModelParams, load_config, parameterize
+from nor_nand_simulator.model.params import NORModelParams, load_config, parameterize_nor
 
 """Helper-variables, these are dynamically calculated, found after Eq. 11/15, depending on Δ"""
 @dataclass
@@ -303,7 +303,7 @@ def rising_trajectory_time_offset(params, Vint):
 
 
 
-
+# TODO (optional): This does currently not support NAND
 def print_delays_report(params, delays):
     VDD = params.physical.VDD
 
@@ -326,14 +326,14 @@ def print_delays_report(params, delays):
     print(f"  δ↑_M(+∞) = {δ_case_g(1e6, 0, params) * 1e12:.4f} ps")
 
 
-
+# TODO (optional): This does currently not support NAND
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SPICE-Delays vs. Modell-Delays Report")
-    parser.add_argument("config", nargs="?", default="gate_params.toml",
-                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    parser.add_argument("config", nargs="?", default="nor_gate_params.toml",
+                        help="Path to nor_gate_params.toml (Default: nor_gate_params.toml)")
     args = parser.parse_args()
 
     delays, physical = load_config(args.config)
-    params = parameterize(delays, physical)
+    params = parameterize_nor(delays, physical)
 
     print_delays_report(params, delays)

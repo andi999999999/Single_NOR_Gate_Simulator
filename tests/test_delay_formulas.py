@@ -1,16 +1,16 @@
 from pathlib import Path
 import pytest
-from nor_simulator.model.params import load_config, parameterize
-from nor_simulator.model.delay_formulas import (
+from nor_nand_simulator.model.params import load_config, parameterize_nor
+from nor_nand_simulator.model.delay_formulas import (
     δ_case_a_f, δ_case_b_e, δ_case_c_d, δ_case_g, δ_case_h,
 )
 
-CONFIG = Path(__file__).resolve().parent.parent / "gate_params.toml"
+CONFIG = Path(__file__).resolve().parent.parent / "nor_gate_params.toml"
 
 @pytest.fixture(scope="module")
 def model():
     delays, physical = load_config(str(CONFIG))
-    params = parameterize(delays, physical)
+    params = parameterize_nor(delays, physical)
     return params, delays
 
 # round-trip tests: the parameters were calculated from these delays, out formulas have to reproduce them

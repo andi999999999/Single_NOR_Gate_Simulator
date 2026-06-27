@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from nor_simulator.transitions import InputTransition, OutputTransition, InputState
+from nor_nand_simulator.transitions import InputTransition, OutputTransition, InputState
 
 
 def plot_timing_diagram(

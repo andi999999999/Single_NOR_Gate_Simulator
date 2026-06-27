@@ -1,13 +1,13 @@
 from pathlib import Path
 import pytest
-from nor_simulator.model.params import load_config, parameterize, eq29
+from nor_nand_simulator.model.params import load_config, parameterize_nor, _eq29
 
-CONFIG = Path(__file__).resolve().parent.parent / "gate_params.toml"
+CONFIG = Path(__file__).resolve().parent.parent / "nor_gate_params.toml"
 
 @pytest.fixture(scope="module")
 def model():
     delays, physical = load_config(str(CONFIG))
-    return parameterize(delays, physical), delays, physical
+    return parameterize_nor(delays, physical), delays, physical
 
 def test_resistances_positive(model):
     params, _, _ = model
@@ -23,7 +23,7 @@ def test_derived_constants_positive(model):
 def test_solve_R_satisfies_eq29(model):
     """R is a zero point of eq29 -> resudual has to be ~0"""
     params, delays, physical = model
-    residual = eq29(
+    residual = _eq29(
         delays.S_rise_0, delays.S_rise_pos, delays.S_rise_neg,
         params.calculated.R, params.calculated.R5,
         physical.C, physical.delta_min,

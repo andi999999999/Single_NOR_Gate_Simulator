@@ -1,24 +1,19 @@
-''' Used for Random input generation'''
+''' Used for Random input generation
+Optimized for NOR, does prefer input changes that lead to varying output transitions
+(Due to the nature of NOR where 3/4 transitions produce 0 as output, this is necessary to not get stuck)
+'''
 import argparse
 
 import numpy as np
 
-from nor_simulator.algorithm import InputTransition, InputState, simulate_nor
-from nor_simulator.reporting.console_report import print_transition_report
-from nor_simulator.reporting.timing_diagram import plot_timing_diagram
-from nor_simulator.model.params import parameterize, load_config
-
-''' 
-Steps: check paper for how long delays are, how long can they be before stabalizing? Check through the paper and make random inputs accordingly
-Will need to get random inputs that fit in succession, like compatible switches, eg 1,1 cant follow 0,0, one switch after the other, need to keep to these rules
-
-Es bietet sich an eine methode die komplett alles random erzeugt auf grundlage eines wertes, zb 5, der angibt wie viele werte ich haben will,
-der erzeugt die dann und feeded sie automatisch an das modell... und das aber irgendwie im zweiten schritt vlt über eine koordinator funktion,
-die entweder diesen wert erhält, oder einen pfad zu einem testfile, das werte enthält die eingelesen werden und direkt gefeeded werden...
-'''
+from nor_nand_simulator.algorithm import InputTransition, InputState, simulate_nor
+from nor_nand_simulator.reporting.console_report import print_transition_report
+from nor_nand_simulator.reporting.timing_diagram import plot_timing_diagram
+from nor_nand_simulator.model.params import parameterize_nor, load_config
 
 R, F, L, H = InputState.RISING, InputState.FALLING, InputState.LOW, InputState.HIGH
 
+# TODO (optional): This does currently not support NAND (is biased for NOR)
 def generate_random_inputs(
         n_transitions: int,         # number of transitions to be generated
         max_delay: float = 4.1e-12, # max delay of any transition
@@ -81,7 +76,7 @@ def _next_states(x: int, y: int):
         (x, 1 - y),  # B toggles
     ]
 
-    # I am making the results biased here, prefering 0,0, avoiding 1,1... so we wont get stuck at output=0
+    # making the results biased here, prefering 0,0, avoiding 1,1... so we wont get stuck at output=0
     weights = []
     for nx, ny in options:
         if (nx, ny) == (0, 0):
@@ -94,7 +89,7 @@ def _next_states(x: int, y: int):
     return options, weights
 
 
-
+# TODO: Version for NAND
 def make_demo_inputs(gaps_ps=None):
     R, F, L = InputState.RISING, InputState.FALLING, InputState.LOW
 
@@ -126,25 +121,26 @@ def make_demo_inputs(gaps_ps=None):
 
 
 # simple sanity check
+# TODO (optional): This does currently not support NAND (
 def test_random_inputs():
     parser = argparse.ArgumentParser(description="Generates a couple random transitions, prints a console-transition-report and generates a timing diagram (plot).")
-    parser.add_argument("config", nargs="?", default="gate_params.toml",
-                        help="Path to gate_params.toml (Default: gate_params.toml)")
+    parser.add_argument("config", nargs="?", default="nor_gate_params.toml",
+                        help="Path to nor_gate_params.toml (Default: nor_gate_params.toml)")
     args = parser.parse_args()
 
     delays, physical = load_config(args.config)
-    params = parameterize(delays, physical)
+    params = parameterize_nor(delays, physical)
 
-    nor_input_transitions = generate_random_inputs(
+    input_transitions = generate_random_inputs(
         n_transitions=30,
         max_delay=4.1e-12,
         t_max_factor=3.0,
         seed=1
     )
-    nor_output_transitions, debug_infos = simulate_nor(nor_input_transitions, params, debug=True)
+    nor_output_transitions, debug_infos = simulate_nor(input_transitions, params, debug=True)
 
-    print_transition_report(nor_input_transitions, nor_output_transitions, debug_infos)
-    plot_timing_diagram(nor_input_transitions, nor_output_transitions, debug_infos)
+    print_transition_report(input_transitions, nor_output_transitions, debug_infos)
+    plot_timing_diagram(input_transitions, nor_output_transitions, debug_infos)
 
 
 if __name__== "__main__":
